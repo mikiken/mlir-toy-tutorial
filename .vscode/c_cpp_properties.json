@@ -3,8 +3,8 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/",
-                "/usr/include/llvm-16/"
+                "${workspaceFolder}",
+                "/usr/lib/llvm-16/include"
             ],
             "compilerPath": "/usr/bin/g++",
             "cppStandard": "c++17",
