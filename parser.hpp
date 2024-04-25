@@ -47,7 +47,51 @@ private:
   Lexer &lexer;
 
   std::unique_ptr<ExprASTList> parseBlock() {}
-  std::unique_ptr<PrototypeAST> parsePrototype() {}
+
+  /// prototype ::= def identifier '() decl_list ')'
+  /// decl_list ::= identifier | identifier, decl_list
+  std::unique_ptr<PrototypeAST> parsePrototype() {
+    auto location = lexer.getLastLocation();
+
+    if (lexer.getCurrentToken() != Token::Def)
+      return parseError<PrototypeAST>("def", "in prototype");
+    lexer.consume(Token::Def);
+
+    if (lexer.getCurrentToken() != Token::Identifier)
+      return parseError<PrototypeAST>("function name", "in prototype");
+
+    std::string functionName(lexer.getIdentifier());
+    lexer.consume(Token::Identifier);
+
+    if (lexer.getCurrentToken() != Token('('))
+      return parseError<PrototypeAST>("(", "in prototype");
+    lexer.consume(Token('('));
+
+    std::vector<std::unique_ptr<VariableExprAST>> args;
+    if (lexer.getCurrentToken() != Token(')')) {
+      do {
+        std::string paramName(lexer.getIdentifier());
+        auto location = lexer.getLastLocation();
+        lexer.consume(Token::Identifier);
+        auto decl =
+            std::make_unique<VariableExprAST>(std::move(location), paramName);
+        args.push_back(std::move(decl));
+        if (lexer.getCurrentToken() != Token(','))
+          break;
+        lexer.consume(Token(','));
+        if (lexer.getCurrentToken() != Token::Identifier)
+          return parseError<PrototypeAST>("identifier",
+                                          "in function parameter list");
+      } while (true);
+    }
+    if (lexer.getCurrentToken() != Token(')'))
+      return parseError<PrototypeAST>(")", "to end function prototype");
+
+    // success
+    lexer.consume(Token(')'));
+    return std::make_unique<PrototypeAST>(std::move(location), functionName,
+                                          std::move(args));
+  }
 
   /// Parse a function definition, we expect a prototype initiated by with the
   /// `def` keyword, followed by a block containing a list of expressions.
