@@ -48,7 +48,20 @@ private:
 
   std::unique_ptr<ExprASTList> parseBlock() {}
   std::unique_ptr<PrototypeAST> parsePrototype() {}
-  std::unique_ptr<FunctionAST> parseDefinition() {}
+
+  /// Parse a function definition, we expect a prototype initiated by with the
+  /// `def` keyword, followed by a block containing a list of expressions.
+  ///
+  /// definition ::= prototype block
+  std::unique_ptr<FunctionAST> parseDefinition() {
+    auto proto = parsePrototype();
+    if (!proto)
+      return nullptr;
+
+    if (auto block = parseBlock())
+      return std::make_unique<FunctionAST>(std::move(proto), std::move(block));
+    return nullptr;
+  }
 
   /// Helper function to signal errors while parsing, it takes an argument
   /// indicating the expected token and another argument giving more context.
