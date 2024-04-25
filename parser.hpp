@@ -50,8 +50,21 @@ private:
   std::unique_ptr<PrototypeAST> parsePrototype() {}
   std::unique_ptr<FunctionAST> parseDefinition() {}
 
+  /// Helper function to signal errors while parsing, it takes an argument
+  /// indicating the expected token and another argument giving more context.
+  /// Location is retrieved from the lexer to enrich the error message.
   template <typename R, typename T, typename U = const char *>
-  std::unique_ptr<R> parseError(T &&expected, U &&context = "") {}
+  std::unique_ptr<R> parseError(T &&expected, U &&context = "") {
+    auto currentToken = lexer.getCurrentToken();
+    llvm::errs() << "Parse error (" << lexer.getLastLocation().line << ", "
+                 << lexer.getLastLocation().column << "): expected '"
+                 << expected << "' " << context << " but has Token "
+                 << currentToken;
+    if (isprint(curToken))
+      llvm::errs() << " '" << (char)curToken << "'";
+    llvm::errs() << "\n";
+    return nullptr;
+  }
 };
 
 } // namespace toy
