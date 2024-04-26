@@ -47,11 +47,22 @@ private:
   Lexer &lexer;
 
   std::unique_ptr<ReturnExprAST> parseReturn() {}
+  std::unique_ptr<ExprAST> parsePrimary() {}
 
-  std::unique_ptr<ExprAST> parseExpression() {}
+  std::unique_ptr<ExprAST> parseBinOpRHS(int exprPrecedence,
+                                         std::unique_ptr<ExprAST> lhs) {}
 
-/// type ::= < shape_list >
-/// shape_list ::= num | num , shape_list
+  /// expression ::= primary binop rhs
+  std::unique_ptr<ExprAST> parseExpression() {
+    auto lhs = parsePrimary();
+    if (!lhs)
+      return nullptr;
+
+    return parseBinOpRHS(0, std::move(lhs));
+  }
+
+  /// type ::= < shape_list >
+  /// shape_list ::= num | num , shape_list
   std::unique_ptr<VarType> parseType() {
     if (lexer.getCurrentToken() != Token('<'))
       return parseError<VarType>("<", "to begin type");
