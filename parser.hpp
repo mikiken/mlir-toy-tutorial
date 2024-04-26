@@ -47,9 +47,41 @@ private:
   Lexer &lexer;
 
   std::unique_ptr<ReturnExprAST> parseReturn() {}
+  std::unique_ptr<VarType> parseType() {}
 
   std::unique_ptr<ExprAST> parseExpression() {}
-  std::unique_ptr<VarDeclExprAST> parseDeclaration() {}
+
+  /// Parse a variable declaration, it starts with a `var` keyword followed by
+  /// and identifier and an optional type (shape specification) before the
+  /// initializer.
+  /// decl ::= var identifier [ type ] = expr
+  std::unique_ptr<VarDeclExprAST> parseDeclaration() {
+    if (lexer.getCurrentToken() != Token::Var)
+      return parseError<VarDeclExprAST>("var", "to begin declaration");
+    auto location = lexer.getLastLocation();
+    lexer.getNextToken(); // eat var
+
+    if (lexer.getCurrentToken() != Token::Identifier)
+      return parseError<VarDeclExprAST>("identifier",
+                                        "after `var` declaration");
+    std::string identifier(lexer.getIdentifier());
+    lexer.getNextToken(); // eat identifier
+
+    std::unique_ptr<VarType> type; // Type is optional, it can be inferred.
+    if (lexer.getCurrentToken() == Token('<')) {
+      type = parseType();
+      if (!type)
+        return nullptr;
+    }
+
+    if (!type)
+      type = std::make_unique<VarType>();
+    lexer.consume(Token('='));
+    auto expr = parseExpression();
+    return std::make_unique<VarDeclExprAST>(std::move(location),
+                                            std::move(identifier),
+                                            std::move(*type), std::move(expr));
+  }
 
   /// Parse a block: a list of expression separated by semicolons and wrapped in
   /// curly braces.
