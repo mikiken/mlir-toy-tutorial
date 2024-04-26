@@ -47,9 +47,30 @@ private:
   Lexer &lexer;
 
   std::unique_ptr<ReturnExprAST> parseReturn() {}
-  std::unique_ptr<VarType> parseType() {}
 
   std::unique_ptr<ExprAST> parseExpression() {}
+
+/// type ::= < shape_list >
+/// shape_list ::= num | num , shape_list
+  std::unique_ptr<VarType> parseType() {
+    if (lexer.getCurrentToken() != Token('<'))
+      return parseError<VarType>("<", "to begin type");
+    lexer.getNextToken(); // eat <
+
+    auto type = std::make_unique<VarType>();
+
+    while (lexer.getCurrentToken() == Token::Number) {
+      type->shape.push_back(lexer.getValue());
+      lexer.getNextToken();
+      if (lexer.getCurrentToken() == Token(','))
+        lexer.getNextToken();
+    }
+
+    if (lexer.getCurrentToken() != Token('>'))
+      return parseError<VarType>(">", "to end type");
+    lexer.getNextToken(); // eat >
+    return type;
+  }
 
   /// Parse a variable declaration, it starts with a `var` keyword followed by
   /// and identifier and an optional type (shape specification) before the
