@@ -46,7 +46,64 @@ public:
 private:
   Lexer &lexer;
 
-  std::unique_ptr<ExprASTList> parseBlock() {}
+  std::unique_ptr<ReturnExprAST> parseReturn() {}
+
+  std::unique_ptr<ExprAST> parseExpression() {}
+  std::unique_ptr<VarDeclExprAST> parseDeclaration() {}
+
+  /// Parse a block: a list of expression separated by semicolons and wrapped in
+  /// curly braces.
+  ///
+  /// block ::= { expression_list }
+  /// expression_list ::= block_expr ; expression_list
+  /// block_expr ::= decl | "return" | expr
+  std::unique_ptr<ExprASTList> parseBlock() {
+    if (lexer.getCurrentToken() != Token('{'))
+      return parseError<ExprASTList>("{", "to begin block");
+    lexer.consume(Token('{'));
+
+    auto exprList = std::make_unique<ExprASTList>();
+
+    // Ignore empty expressions: swallow sequences of semicolons.
+    while (lexer.getCurrentToken() == Token(';'))
+      lexer.consume(Token(';'));
+
+    while (lexer.getCurrentToken() != Token('}') &&
+           lexer.getCurrentToken() != Token::EOF_) {
+      if (lexer.getCurrentToken() == Token::Var) {
+        // Variable declaration
+        auto varDecl = parseDeclaration();
+        if (!varDecl)
+          return nullptr;
+        exprList->push_back(std::move(varDecl));
+      } else if (lexer.getCurrentToken() == Token::Return) {
+        // Return statement
+        auto ret = parseReturn();
+        if (!ret)
+          return nullptr;
+        exprList->push_back(std::move(ret));
+      } else {
+        // General expression
+        auto expr = parseExpression();
+        if (!expr)
+          return nullptr;
+        exprList->push_back(std::move(expr));
+      }
+      // Ensure that elements are separated by a semicolon.
+      if (lexer.getCurrentToken() != Token(';'))
+        return parseError<ExprASTList>(";", "after expression");
+
+      // Ignore empty expressions: swallow sequences of semicolons.
+      while (lexer.getCurrentToken() == Token(';'))
+        lexer.consume(Token(';'));
+    }
+
+    if (lexer.getCurrentToken() != Token('}'))
+      parseError<ExprASTList>("}", "to close block");
+
+    lexer.consume(Token('}'));
+    return exprList;
+  }
 
   /// prototype ::= def identifier '() decl_list ')'
   /// decl_list ::= identifier | identifier, decl_list
