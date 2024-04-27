@@ -47,7 +47,36 @@ private:
   Lexer &lexer;
 
   std::unique_ptr<ReturnExprAST> parseReturn() {}
-  std::unique_ptr<ExprAST> parsePrimary() {}
+  std::unique_ptr<ExprAST> parseNumberExpr() {}
+  std::unique_ptr<ExprAST> parseTensorLiteralExpr() {}
+  std::unique_ptr<ExprAST> parseParenExpr() {}
+  std::unique_ptr<ExprAST> parseIdentifierExpr() {}
+
+  /// primary
+  ///   ::= identifierexpr
+  ///   ::= numberexpr
+  ///   ::= parenexpr
+  ///   ::= tensorliteral
+  std::unique_ptr<ExprAST> parsePrimary() {
+    switch (lexer.getCurrentToken()) {
+    case Token::Identifier:
+      return parseIdentifierExpr();
+    case Token::Number:
+      return parseNumberExpr();
+    case Token::Parenthesis_open:
+      return parseParenExpr();
+    case Token::Bracket_open:
+      return parseTensorLiteralExpr();
+    case Token(';'):
+      return nullptr;
+    case Token('}'):
+      return nullptr;
+    default:
+      llvm::errs() << "unknown token '" << (char)lexer.getCurrentToken()
+                   << "' when expecting an expression\n";
+      return nullptr;
+    }
+  }
 
   /// Recursively parse the right hand side of a binary expression,
   /// the ExprPrecedence argument indicates the precedence of the current
