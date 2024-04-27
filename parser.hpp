@@ -49,8 +49,46 @@ private:
   std::unique_ptr<ReturnExprAST> parseReturn() {}
   std::unique_ptr<ExprAST> parsePrimary() {}
 
+  /// Recursively parse the right hand side of a binary expression,
+  /// the ExprPrecedence argument indicates the precedence of the current
+  /// binary operator.
+  ///
+  /// binoprhs ::= ('+' primary)*
   std::unique_ptr<ExprAST> parseBinOpRHS(int exprPrecedence,
-                                         std::unique_ptr<ExprAST> lhs) {}
+                                         std::unique_ptr<ExprAST> lhs) {
+    // If this is a binop, find its precedence.
+    while (true) {
+      int tokenPrecedence = getTokenPrecedence();
+
+      // If this is a binop that binds at least as tightly as the current binop,
+      // consume it, otherwise we are done.
+      if (tokenPrecedence < exprPrecedence)
+        return lhs;
+
+      // Okay, we know this is a binop.
+      Token binOp = lexer.getCurrentToken();
+      lexer.consume(binOp);
+      auto location = lexer.getLastLocation();
+
+      // Parse the primary expression after the binary operator.
+      auto rhs = parsePrimary();
+      if (!rhs)
+        return parseError<ExprAST>("expression", "to complete binary operator");
+
+      // If BinOp binds less tightly with rhs than the operator after rhs,
+      // let the pending operator take rhs as its lhs.
+      int nextPrecedence = getTokenPrecedence();
+      if (tokenPrecedence < nextPrecedence) {
+        rhs = parseBinOpRHS(tokenPrecedence + 1, std::move(rhs));
+        if (!rhs)
+          return nullptr;
+      }
+
+      // Merge LHS/RHS.
+      lhs = std::make_unique<BinaryExprAST>(std::move(location), binOp,
+                                            std::move(lhs), std::move(rhs));
+    }
+  }
 
   /// expression ::= primary binop rhs
   std::unique_ptr<ExprAST> parseExpression() {
@@ -226,6 +264,24 @@ private:
     if (auto block = parseBlock())
       return std::make_unique<FunctionAST>(std::move(proto), std::move(block));
     return nullptr;
+  }
+
+  /// Get the precedence of the pending binary operator token.
+  int getTokenPrecedence() {
+    if (!isascii((int)lexer.getCurrentToken()))
+      return -1;
+
+    // 1 is lowerest precedence.
+    switch (static_cast<char>(lexer.getCurrentToken())) {
+    case '-':
+      return 20;
+    case '+':
+      return 20;
+    case '*':
+      return 40;
+    default:
+      return -1;
+    }
   }
 
   /// Helper function to signal errors while parsing, it takes an argument
