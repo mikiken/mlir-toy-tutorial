@@ -46,7 +46,22 @@ public:
 private:
   Lexer &lexer;
 
-  std::unique_ptr<ReturnExprAST> parseReturn() {}
+  /// Parse a return statement.
+  /// return ::= return ; | return expr ;
+  std::unique_ptr<ReturnExprAST> parseReturn() {
+    auto location = lexer.getLastLocation();
+    lexer.consume(Token::Return);
+
+    // return takes an optional expression.
+    std::optional<std::unique_ptr<ExprAST>> expr;
+    if (lexer.getCurrentToken() != Token(';')) {
+      expr = parseExpression();
+      if (!expr)
+        return nullptr;
+    }
+    return std::make_unique<ReturnExprAST>(std::move(location),
+                                           std::move(expr));
+  }
 
   /// Parse a literal number.
   /// numberexpr ::= number
