@@ -47,7 +47,17 @@ private:
   Lexer &lexer;
 
   std::unique_ptr<ReturnExprAST> parseReturn() {}
-  std::unique_ptr<ExprAST> parseNumberExpr() {}
+
+  /// Parse a literal number.
+  /// numberexpr ::= number
+  std::unique_ptr<ExprAST> parseNumberExpr() {
+    auto location = lexer.getLastLocation();
+    auto result =
+        std::make_unique<NumberExprAST>(std::move(location), lexer.getValue());
+    lexer.consume(Token::Number);
+    return std::move(result);
+  }
+
   std::unique_ptr<ExprAST> parseTensorLiteralExpr() {}
 
   /// parenexpr ::= '(' expression ')'
