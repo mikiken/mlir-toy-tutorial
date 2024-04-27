@@ -50,7 +50,53 @@ private:
   std::unique_ptr<ExprAST> parseNumberExpr() {}
   std::unique_ptr<ExprAST> parseTensorLiteralExpr() {}
   std::unique_ptr<ExprAST> parseParenExpr() {}
-  std::unique_ptr<ExprAST> parseIdentifierExpr() {}
+
+  /// identifierexpr
+  ///   ::= identifier
+  ///   ::= identifier '(' expression* ')'
+  std::unique_ptr<ExprAST> parseIdentifierExpr() {
+    std::string name(lexer.getIdentifier());
+
+    auto location = lexer.getLastLocation();
+    lexer.getNextToken(); // eat identifier
+
+    if (lexer.getCurrentToken() != Token('(')) // Simple variable ref.
+      return std::make_unique<VariableExprAST>(std::move(location), name);
+
+    // Otherwise, this is a function call.
+    lexer.consume(Token('('));
+    ExprASTList args;
+    if (lexer.getCurrentToken() != Token(')')) {
+      while (true) {
+        if (auto arg = parseExpression())
+          args.push_back(std::move(arg));
+        else
+          return nullptr;
+
+        if (lexer.getCurrentToken() == Token(')'))
+          break;
+
+        if (lexer.getCurrentToken() != Token(','))
+          return parseError<ExprAST>(", or )", "in argument list");
+        lexer.getNextToken();
+      }
+    }
+    lexer.consume(Token(')'));
+
+    // it can be a builtin call to print
+    if (name == "print") {
+      if (args.size() != 1)
+        return parseError<ExprAST>("<single arg>",
+                                   "as argument list to print()");
+
+      return std::make_unique<PrintExprAST>(std::move(location),
+                                            std::move(args[0]));
+    }
+
+    // Call to user defined function
+    return std::make_unique<CallExprAST>(std::move(location), name,
+                                         std::move(args));
+  }
 
   /// primary
   ///   ::= identifierexpr
