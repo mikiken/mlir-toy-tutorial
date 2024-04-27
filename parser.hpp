@@ -49,7 +49,19 @@ private:
   std::unique_ptr<ReturnExprAST> parseReturn() {}
   std::unique_ptr<ExprAST> parseNumberExpr() {}
   std::unique_ptr<ExprAST> parseTensorLiteralExpr() {}
-  std::unique_ptr<ExprAST> parseParenExpr() {}
+
+  /// parenexpr ::= '(' expression ')'
+  std::unique_ptr<ExprAST> parseParenExpr() {
+    lexer.getNextToken(); // eat (
+    auto v = parseExpression();
+    if (!v)
+      return nullptr;
+
+    if (lexer.getCurrentToken() != Token(')'))
+      return parseError<ExprAST>(")", "to close expression with parentheses");
+    lexer.consume(Token(')'));
+    return v;
+  }
 
   /// identifierexpr
   ///   ::= identifier
