@@ -73,7 +73,73 @@ private:
     return std::move(result);
   }
 
-  std::unique_ptr<ExprAST> parseTensorLiteralExpr() {}
+  /// Parse a literal tensor.
+  /// tensorLiteral ::= [ literalList ] | number
+  /// literalList ::= tensorLiteral | tensorLiteral, literalList
+  std::unique_ptr<ExprAST> parseTensorLiteralExpr() {
+    auto location = lexer.getLastLocation();
+    lexer.consume(Token('['));
+
+    // Hold the list of values at this nesting level.
+    ExprASTList values;
+    // Hold the dimensions for all the nesting inside this level.
+    std::vector<int64_t> dims;
+    do {
+      // We can have either another nested array or a number literal.
+      if (lexer.getCurrentToken() == Token('[')) {
+        values.push_back(parseTensorLiteralExpr());
+        if (!values.back())
+          return nullptr; // parse error in the nested array.
+      } else {
+        if (lexer.getCurrentToken() != Token::Number)
+          return parseError<ExprAST>("<num> or [", "in literal expression");
+        values.push_back(parseNumberExpr());
+      }
+
+      // End of this list on ']'
+      if (lexer.getCurrentToken() == Token(']'))
+        break;
+
+      // Elements are separated by a comma.
+      if (lexer.getCurrentToken() != Token(','))
+        return parseError<ExprAST>("] or ,", "in literal expression");
+      lexer.getNextToken(); // eat ,
+    } while (true);
+    if (values.empty())
+      return parseError<ExprAST>("<something>", "to fill literal expression");
+    lexer.getNextToken(); // eat ]
+
+    /// Fill in the dimensions now. First the current nesting level:
+    dims.push_back(values.size());
+
+    /// If there is any nested array, process all of them and ensure that
+    /// dimensions are uniform.
+    if (llvm::any_of(values, [](std::unique_ptr<ExprAST> &expr) {
+          return llvm::isa<LiteralExprAST>(expr.get());
+        })) {
+      auto *firstLiteral = llvm::dyn_cast<LiteralExprAST>(values.front().get());
+      if (!firstLiteral)
+        return parseError<ExprAST>("uniform well-nested dimensions",
+                                   "inside literal expression");
+
+      // Append the nested dimensions to the current level.
+      auto firstDims = firstLiteral->getDims();
+      dims.insert(dims.end(), firstDims.begin(), firstDims.end());
+
+      // Sanity chack that shape is uniform across all elements of the list.
+      for (auto &expr : values) {
+        auto *exprLiteral = llvm::cast<LiteralExprAST>(expr.get());
+        if (!exprLiteral)
+          parseError<ExprAST>("uniform well-nested dimensions",
+                              "inside literal expression");
+        if (exprLiteral->getDims() != firstDims)
+          return parseError<ExprAST>("uniform well-nested dimensions",
+                                     "inside literal expression");
+      }
+    }
+    return std::make_unique<LiteralExprAST>(std::move(location),
+                                            std::move(values), std::move(dims));
+  }
 
   /// parenexpr ::= '(' expression ')'
   std::unique_ptr<ExprAST> parseParenExpr() {
