@@ -221,7 +221,8 @@ private:
     case Token('}'):
       return nullptr;
     default:
-      llvm::errs() << "unknown token '" << (char)lexer.getCurrentToken()
+      llvm::errs() << "unknown token '"
+                   << static_cast<char>(lexer.getCurrentToken())
                    << "' when expecting an expression\n";
       return nullptr;
     }
@@ -446,7 +447,7 @@ private:
 
   /// Get the precedence of the pending binary operator token.
   int getTokenPrecedence() {
-    if (!isascii((int)lexer.getCurrentToken()))
+    if (!isascii(static_cast<int>(lexer.getCurrentToken())))
       return -1;
 
     // 1 is lowerest precedence.
@@ -473,7 +474,7 @@ private:
                  << expected << "' " << context << " but has Token "
                  << currentToken;
     if (isprint(currentToken))
-      llvm::errs() << " '" << (char)currentToken << "'";
+      llvm::errs() << " '" << static_cast<char>(currentToken) << "'";
     llvm::errs() << "\n";
     return nullptr;
   }
