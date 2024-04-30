@@ -34,3 +34,16 @@ RUN apt-get install llvm-16
 
 # Install MLIR 16
 RUN apt-get install -y libmlir-16-dev mlir-16-tools
+
+# Add user
+ARG USERNAME=mikiken
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+USER mikiken
