@@ -472,8 +472,8 @@ private:
     llvm::errs() << "Parse error (" << lexer.getLastLocation().line << ", "
                  << lexer.getLastLocation().column << "): expected '"
                  << expected << "' " << context << " but has Token "
-                 << currentToken;
-    if (isprint(currentToken))
+                 << static_cast<char>(currentToken);
+    if (isprint(static_cast<int>(currentToken)))
       llvm::errs() << " '" << static_cast<char>(currentToken) << "'";
     llvm::errs() << "\n";
     return nullptr;
