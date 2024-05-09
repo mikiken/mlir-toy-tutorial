@@ -1,6 +1,6 @@
-#include "ast.hpp"
-#include "lexer.hpp"
-#include "parser.hpp"
+#include "toy/ast.hpp"
+#include "toy/lexer.hpp"
+#include "toy/parser.hpp"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
