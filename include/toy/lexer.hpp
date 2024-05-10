@@ -115,7 +115,7 @@ private:
   ///  Return the next token from standard input.
   Token getToken() {
     // Skip any whitespace.
-    while (isspace((int)lastChar))
+    while (isspace(static_cast<int>(lastChar)))
       lastChar = Token(getNextChar());
 
     // Save the current location before reading the token characters.
@@ -123,11 +123,11 @@ private:
     lastLocation.column = currentColumn;
 
     // Identifier: [a-zA-Z][a-zA-Z0-9_]*
-    if (isalpha((int)lastChar)) {
-      identifierStr = (char)lastChar;
-      while (isalnum((int)(lastChar = Token(getNextChar()))) ||
+    if (isalpha(static_cast<int>(lastChar))) {
+      identifierStr = static_cast<char>(lastChar);
+      while (isalnum(static_cast<int>(lastChar = Token(getNextChar()))) ||
              lastChar == Token('_'))
-        identifierStr += (char)lastChar;
+        identifierStr += static_cast<char>(lastChar);
 
       if (identifierStr == "return")
         return Token::Return;
@@ -140,12 +140,12 @@ private:
     }
 
     // Number: [0-9.]+
-    if (isdigit((int)lastChar) || lastChar == Token('.')) {
+    if (isdigit(static_cast<int>(lastChar)) || lastChar == Token('.')) {
       std::string numStr;
       do {
-        numStr += (int)lastChar;
+        numStr += static_cast<int>(lastChar);
         lastChar = Token(getNextChar());
-      } while (isdigit((int)lastChar) || lastChar == Token('.'));
+      } while (isdigit(static_cast<int>(lastChar)) || lastChar == Token('.'));
 
       numberValue = strtod(numStr.c_str(), nullptr);
       return Token::Number;
