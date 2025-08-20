@@ -58,4 +58,7 @@ settings.json
 # build output
 build/
 
+# Toy Tutorial specific
+toyc
+
 # End of https://www.toptal.com/developers/gitignore/api/c++,cmake
