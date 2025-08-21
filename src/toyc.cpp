@@ -1,4 +1,5 @@
 #include "toy/ast.hpp"
+#include "toy/dialect.hpp"
 #include "toy/lexer.hpp"
 #include "toy/parser.hpp"
 
@@ -7,6 +8,8 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include "mlir/IR/MLIRContext.h"
 
 #include <memory>
 #include <string>
@@ -20,7 +23,10 @@ static cl::opt<std::string> inputFilename(cl::Positional,
                                           cl::init("-"),
                                           cl::value_desc("filename"));
 
-enum class Action { None, DumpAST };
+enum InputType { Toy, MLIR };
+static cl::opt<InputType> inputType();
+
+enum class Action { None, DumpAST, DumpMLIR };
 
 static cl::opt<Action> emitAction(
     "emit", cl::desc("Select the kind of output desired"),
@@ -41,6 +47,11 @@ std::unique_ptr<toy::ModuleAST> parseInputFile(llvm::StringRef filename) {
   return parser.parseModule();
 }
 
+int dumpMLIR() {}
+
+// TODO: wrap dump() in this function
+int dumpAST() {}
+
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "toy compiler\n");
 
@@ -51,7 +62,8 @@ int main(int argc, char **argv) {
   switch (emitAction) {
   case Action::DumpAST:
     dump(*moduleAST);
-    return 0;
+  case Action::DumpMLIR:
+    dumpMLIR();
   default:
     llvm::errs() << "No action specified (parsing only?), use -emit=<action>\n";
   }
