@@ -23,7 +23,7 @@ namespace toy {
 class Parser {
 public:
   /// Create a Parser for supplied lexer.
-  Parser(Lexer &lexer) : lexer(lexer){};
+  Parser(Lexer &lexer) : lexer(lexer) {};
 
   /// Parse a full Module. A module is a list of function definitions.
   std::unique_ptr<ModuleAST> parseModule() {
