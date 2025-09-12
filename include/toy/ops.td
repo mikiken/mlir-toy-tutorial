@@ -2,7 +2,7 @@
 #define TOY_OPS
 
 include "mlir/IR/OpBase.td"
-include "mlir/Interfaces/FunctionInterfaces.td"
+include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
