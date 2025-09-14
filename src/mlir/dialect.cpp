@@ -308,4 +308,4 @@ llvm::LogicalResult TransposeOp::verify() {
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "toy/Ops.cpp.inc"
+#include "toy/ops.cpp.inc"
