@@ -1,13 +1,8 @@
 #include "toy/ast.hpp"
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
-#include <string>
-
-using namespace toy;
 
 namespace {
 
@@ -23,22 +18,22 @@ struct Indent {
 /// the way. The only data member is the current indentation level.
 class ASTDumper {
 public:
-  void dump(ModuleAST *node);
+  void dump(const toy::ModuleAST *node);
 
 private:
-  void dump(const VarType &type);
-  void dump(VarDeclExprAST *varDecl);
-  void dump(ExprAST *expr);
-  void dump(ExprASTList *exprList);
-  void dump(NumberExprAST *num);
-  void dump(LiteralExprAST *node);
-  void dump(VariableExprAST *node);
-  void dump(ReturnExprAST *node);
-  void dump(BinaryExprAST *node);
-  void dump(CallExprAST *node);
-  void dump(PrintExprAST *node);
-  void dump(PrototypeAST *node);
-  void dump(FunctionAST *node);
+  void dump(const toy::VarType &type);
+  void dump(const toy::VarDeclExprAST *varDecl);
+  void dump(const toy::ExprAST *expr);
+  void dump(const toy::ExprASTList *exprList);
+  void dump(const toy::NumberExprAST *num);
+  void dump(const toy::LiteralExprAST *node);
+  void dump(const toy::VariableExprAST *node);
+  void dump(const toy::ReturnExprAST *node);
+  void dump(const toy::BinaryExprAST *node);
+  void dump(const toy::CallExprAST *node);
+  void dump(const toy::PrintExprAST *node);
+  void dump(const toy::PrototypeAST *node);
+  void dump(const toy::FunctionAST *node);
 
   // Actually print spaces matching the current indentation level
   void indent() {
@@ -51,7 +46,7 @@ private:
 } // namespace
 
 /// Return a formatted string for the location of any node
-template <typename T> static std::string location(T *node) {
+template <typename T> static std::string location(const T *node) {
   const auto &location = node->getLocation();
   return (llvm::Twine("@") + *location.file + ":" + llvm::Twine(location.line) +
           ":" + llvm::Twine(location.column))
@@ -65,22 +60,22 @@ template <typename T> static std::string location(T *node) {
   indent();
 
 /// Dispatch to a generic expressions to the appropriate subclass using RTTI
-void ASTDumper::dump(ExprAST *expr) {
-  llvm::TypeSwitch<ExprAST *>(expr)
-      .Case<BinaryExprAST, CallExprAST, LiteralExprAST, NumberExprAST,
-            PrintExprAST, ReturnExprAST, VarDeclExprAST, VariableExprAST>(
-          [&](auto *node) { this->dump(node); })
-      .Default([&](ExprAST *) {
+void ASTDumper::dump(const toy::ExprAST *expr) {
+  llvm::TypeSwitch<const toy::ExprAST *>(expr)
+      .Case<toy::BinaryExprAST, toy::CallExprAST, toy::LiteralExprAST,
+            toy::NumberExprAST, toy::PrintExprAST, toy::ReturnExprAST,
+            toy::VarDeclExprAST, toy::VariableExprAST>(
+          [&](const auto *node) { this->dump(node); })
+      .Default([&](const toy::ExprAST *) {
         // No match, fallback to a generic message
         INDENT();
-        llvm::errs() << "<unknown Expr, kind "
-                     << static_cast<char>(expr->getKind()) << ">\n";
+        llvm::errs() << "<unknown Expr, kind " << (int)expr->getKind() << ">\n";
       });
 }
 
 /// A variable declaration is printing the variable name, the type, and then
 /// recurse in the initializer value.
-void ASTDumper::dump(VarDeclExprAST *varDecl) {
+void ASTDumper::dump(const toy::VarDeclExprAST *varDecl) {
   INDENT();
   llvm::errs() << "VarDecl " << varDecl->getName();
   dump(varDecl->getType());
@@ -89,17 +84,17 @@ void ASTDumper::dump(VarDeclExprAST *varDecl) {
 }
 
 /// A "block", or a list of expression
-void ASTDumper::dump(ExprASTList *exprList) {
+void ASTDumper::dump(const toy::ExprASTList *exprList) {
   INDENT();
   llvm::errs() << "Block {\n";
-  for (auto &expr : *exprList)
+  for (const auto &expr : *exprList)
     dump(expr.get());
   indent();
   llvm::errs() << "} // Block\n";
 }
 
 /// A literal number, just print the value.
-void ASTDumper::dump(NumberExprAST *num) {
+void ASTDumper::dump(const toy::NumberExprAST *num) {
   INDENT();
   llvm::errs() << num->getValue() << " " << location(num) << "\n";
 }
@@ -108,13 +103,13 @@ void ASTDumper::dump(NumberExprAST *num) {
 ///    [ [ 1, 2 ], [ 3, 4 ] ]
 /// We print out such array with the dimensions spelled out at every level:
 ///    <2,2>[<2>[ 1, 2 ], <2>[ 3, 4 ] ]
-void printLiteralHelper(ExprAST *litOrNum) {
+void printLiteralHelper(const toy::ExprAST *litOrNum) {
   // Inside a literal expression we can have either a number or another literal
-  if (auto *num = llvm::dyn_cast<NumberExprAST>(litOrNum)) {
+  if (const auto *num = llvm::dyn_cast<toy::NumberExprAST>(litOrNum)) {
     llvm::errs() << num->getValue();
     return;
   }
-  auto *literal = llvm::cast<LiteralExprAST>(litOrNum);
+  const auto *literal = llvm::cast<toy::LiteralExprAST>(litOrNum);
 
   // Print the dimension for this literal first
   llvm::errs() << "<";
@@ -123,13 +118,14 @@ void printLiteralHelper(ExprAST *litOrNum) {
 
   // Now print the content, recursing on every element of the list
   llvm::errs() << "[ ";
-  llvm::interleaveComma(literal->getValues(), llvm::errs(),
-                        [&](auto &elt) { printLiteralHelper(elt.get()); });
-  llvm::errs() << "]";
+  llvm::interleaveComma(
+      literal->getValues(), llvm::errs(),
+      [&](const auto &elt) { printLiteralHelper(elt.get()); });
+  llvm::errs() << " ]";
 }
 
 /// Print a literal, see the recursive helper above for the implementation.
-void ASTDumper::dump(LiteralExprAST *node) {
+void ASTDumper::dump(const toy::LiteralExprAST *node) {
   INDENT();
   llvm::errs() << "Literal: ";
   printLiteralHelper(node);
@@ -137,46 +133,46 @@ void ASTDumper::dump(LiteralExprAST *node) {
 }
 
 /// Print a variable reference (just a name).
-void ASTDumper::dump(VariableExprAST *node) {
+void ASTDumper::dump(const toy::VariableExprAST *node) {
   INDENT();
   llvm::errs() << "var: " << node->getName() << " " << location(node) << "\n";
 }
 
 /// Return statement print the return and its (optional) argument.
-void ASTDumper::dump(ReturnExprAST *node) {
+void ASTDumper::dump(const toy::ReturnExprAST *node) {
   INDENT();
   llvm::errs() << "Return\n";
-  if (node->getExpr().has_value())
-    return dump(*node->getExpr());
-  {
+  if (auto expr = node->getExpr()) {
+    dump(*expr);
+  } else {
     INDENT();
     llvm::errs() << "(void)\n";
   }
 }
 
 /// Print a binary operation, first the operator, then recurse into LHS and RHS.
-void ASTDumper::dump(BinaryExprAST *node) {
+void ASTDumper::dump(const toy::BinaryExprAST *node) {
   INDENT();
-  llvm::errs() << "BinOp: " << static_cast<char>(node->getOp()) << " "
-               << location(node) << "\n";
+  llvm::errs() << "BinOp: " << (char)node->getOp() << " " << location(node)
+               << "\n";
   dump(node->getLHS());
   dump(node->getRHS());
 }
 
 /// Print a call expression, first the callee name and the list of args by
 /// recursing into each individual argument.
-void ASTDumper::dump(CallExprAST *node) {
+void ASTDumper::dump(const toy::CallExprAST *node) {
   INDENT();
   llvm::errs() << "Call '" << node->getCallee() << "' [ " << location(node)
                << "\n";
-  for (auto &arg : node->getArgs())
+  for (const auto &arg : node->getArgs())
     dump(arg.get());
   indent();
   llvm::errs() << "]\n";
 }
 
 /// Print a builtin print call, first the builtin name and then the argument.
-void ASTDumper::dump(PrintExprAST *node) {
+void ASTDumper::dump(const toy::PrintExprAST *node) {
   INDENT();
   llvm::errs() << "Print [ " << location(node) << "\n";
   dump(node->getArg());
@@ -185,7 +181,7 @@ void ASTDumper::dump(PrintExprAST *node) {
 }
 
 /// Print type: only the shape is printed in between '<' and '>'
-void ASTDumper::dump(const VarType &type) {
+void ASTDumper::dump(const toy::VarType &type) {
   llvm::errs() << "<";
   llvm::interleaveComma(type.shape, llvm::errs());
   llvm::errs() << ">";
@@ -193,19 +189,20 @@ void ASTDumper::dump(const VarType &type) {
 
 /// Print a function prototype, first the function name, and then the list of
 /// parameters names.
-void ASTDumper::dump(PrototypeAST *node) {
+void ASTDumper::dump(const toy::PrototypeAST *node) {
   INDENT();
   llvm::errs() << "Proto '" << node->getName() << "' " << location(node)
                << "\n";
   indent();
   llvm::errs() << "Params: [";
-  llvm::interleaveComma(node->getArgs(), llvm::errs(),
-                        [](auto &arg) { llvm::errs() << arg->getName(); });
+  llvm::interleaveComma(node->getArgs(), llvm::errs(), [](const auto &arg) {
+    llvm::errs() << arg->getName();
+  });
   llvm::errs() << "]\n";
 }
 
 /// Print a function, first the prototype and then the body.
-void ASTDumper::dump(FunctionAST *node) {
+void ASTDumper::dump(const toy::FunctionAST *node) {
   INDENT();
   llvm::errs() << "Function \n";
   dump(node->getProto());
@@ -213,10 +210,10 @@ void ASTDumper::dump(FunctionAST *node) {
 }
 
 /// Print a module, actually loop over the functions and print them in sequence.
-void ASTDumper::dump(ModuleAST *node) {
+void ASTDumper::dump(const toy::ModuleAST *node) {
   INDENT();
   llvm::errs() << "Module:\n";
-  for (auto &f : *node)
+  for (const auto &f : *node)
     dump(&f);
 }
 

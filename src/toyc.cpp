@@ -1,11 +1,13 @@
 #include "toy/ast.hpp"
 #include "toy/dialect.hpp"
 #include "toy/lexer.hpp"
+#include "toy/mlirGen.hpp"
 #include "toy/parser.hpp"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -67,7 +69,8 @@ int dumpMLIR() {
     auto moduleAST = parseInputFile(inputFilename);
     if (!moduleAST)
       return 6;
-    mlir::OwningOpRef<mlir::ModuleOp> module = mlirGen(context, *moduleAST);
+    mlir::OwningOpRef<mlir::ModuleOp> module =
+        toy::mlirGen(context, *moduleAST);
     if (!module)
       return 1;
 

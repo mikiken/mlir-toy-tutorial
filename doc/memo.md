@@ -2,3 +2,5 @@
 - `std::shared_ptr<T>`は参照カウントを持つスマートポインタ
 - デストラクタの`virtual`って何
     - https://marycore.jp/prog/cpp/virtual-destructor/
+
+- zstdをインストールする処理をDockerfileに追記
