@@ -18,6 +18,8 @@ RUN apt-get install -y \
     autoconf-archive \
     ninja-build \
     lsb-release \
+    libzstd-dev \
+    zlib1g-dev \
     software-properties-common \
     gnupg \
     pkg-config
